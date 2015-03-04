@@ -1,3 +1,3 @@
-# Readme.
+# Readme
 
 Content soon-ish.
