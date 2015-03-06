@@ -54,18 +54,38 @@ module.exports = function(grunt) {
     		]
     	}
     },
-    web_server: {
-		options: {
-			cors: true,
-			port: 8001,
-			nevercache: true,
-			logRequests: true
-		},
-		foo: 'bar' // For some reason an extra key with a non-object value is necessary 
+    "http-server": {
+		'dev': {
+ 
+            // the server root directory 
+            root: '_build/www/',
+ 
+            // the server port 
+            // can also be written as a function, e.g. 
+            // port: function() { return 8282; } 
+            port: 8001,
+            
+            // the host ip address 
+            // If specified to, for example, "127.0.0.1" the server will  
+            // only be available on that ip. 
+            // Specify "0.0.0.0" to be available everywhere 
+            host: "127.0.0.1",
+ 
+            cache: 0,
+            showDir : true,
+            autoIndex: true,
+ 
+            // server default file extension 
+            ext: "html",
+ 
+            // run in parallel with other tasks 
+            runInBackground: false
+ 
+        }
 	},
     watch: {
       styles: {
-        files: ['_working/www/css/**/*.less', '_working/www/**/*.css', '_working/www/**/*.js', '_working/www/**/*.html'], // which files to watch
+        files: ['_working/www/img/*', '_working/www/css/**/*.less', '_working/www/**/*.css', '_working/www/**/*.js', '_working/www/**/*.html'], // which files to watch
         tasks: ['less','uglify','copy'],
         options: {
           nospawn: true
@@ -79,11 +99,11 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-copy');
-  grunt.loadNpmTasks('grunt-web-server');
+  grunt.loadNpmTasks('grunt-http-server');
 
 
   //grunt.registerTask('test', ['jshint']);
 
   grunt.registerTask('default', ['uglify', 'copy', 'less', 'watch']);
-  grunt.registerTask('server', ['web_server']);
+  //grunt.registerTask('server', ['web_server']);
 };
