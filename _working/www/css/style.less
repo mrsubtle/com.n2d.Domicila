@@ -1,3 +1,40 @@
 // style.less
 // v1.0.0
 
+
+// VARIABLES
+
+// TYPOGRAPHY
+@import '../fonts/geomanist/100/stylesheet.css';
+@import '../fonts/geomanist/200/stylesheet.css';
+@import '../fonts/geomanist/300/stylesheet.css';
+@import '../fonts/geomanist/400/stylesheet.css';
+@import '../fonts/geomanist/500/stylesheet.css';
+@import '../fonts/geomanist/600/stylesheet.css';
+@import '../fonts/geomanist/700/stylesheet.css';
+@import '../fonts/geomanist/800/stylesheet.css';
+@import '../fonts/geomanist/900/stylesheet.css';
+@import '../fonts/caslon/400/stylesheet.css';
+@import '../fonts/caslon/600/stylesheet.css';
+@import '../fonts/caslon/700/stylesheet.css';
+
+@uiFamily: 'geomanist';
+@ueFamily: 'caslon';
+
+
+* {
+    -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
+}
+
+body {
+    -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
+    -webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
+    -webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
+    font-family: @uiFamily;
+    font-size:12px;
+    height:100%;
+    margin:0px;
+    padding:0px;
+    text-transform:uppercase;
+    width:100%;
+}
