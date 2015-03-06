@@ -5,36 +5,84 @@
 // VARIABLES
 
 // TYPOGRAPHY
-@import '../fonts/geomanist/100/stylesheet.css';
-@import '../fonts/geomanist/200/stylesheet.css';
-@import '../fonts/geomanist/300/stylesheet.css';
-@import '../fonts/geomanist/400/stylesheet.css';
-@import '../fonts/geomanist/500/stylesheet.css';
-@import '../fonts/geomanist/600/stylesheet.css';
-@import '../fonts/geomanist/700/stylesheet.css';
-@import '../fonts/geomanist/800/stylesheet.css';
-@import '../fonts/geomanist/900/stylesheet.css';
-@import '../fonts/caslon/400/stylesheet.css';
-@import '../fonts/caslon/600/stylesheet.css';
-@import '../fonts/caslon/700/stylesheet.css';
+	@import '../fonts/geomanist/100/stylesheet.css';
+	@import '../fonts/geomanist/200/stylesheet.css';
+	@import '../fonts/geomanist/300/stylesheet.css';
+	@import '../fonts/geomanist/400/stylesheet.css';
+	@import '../fonts/geomanist/500/stylesheet.css';
+	@import '../fonts/geomanist/600/stylesheet.css';
+	@import '../fonts/geomanist/700/stylesheet.css';
+	@import '../fonts/geomanist/800/stylesheet.css';
+	@import '../fonts/geomanist/900/stylesheet.css';
+	@import '../fonts/caslon/400/stylesheet.css';
+	@import '../fonts/caslon/600/stylesheet.css';
+	@import '../fonts/caslon/700/stylesheet.css';
 
-@uiFamily: 'geomanist';
-@ueFamily: 'caslon';
+	@uiFamily: 'geomanist';
+	@ueFamily: 'caslon';
+
+	@touchBase: 50px;
+	@navHeight: (@touchBase * 1);
+
+	//@appBGsolid: rgb(248,243,231); //F8F3E7
+	@appBGsolid: #f0f0f0;
+	@mainColor: #373737;
 
 
-* {
-    -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
-}
+// DEFINITIONS
 
-body {
-    -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
-    -webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
-    -webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
-    font-family: @uiFamily;
-    font-size:12px;
-    height:100%;
-    margin:0px;
-    padding:0px;
-    text-transform:uppercase;
-    width:100%;
-}
+	* {
+		-webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
+		-webkit-box-sizing: border-box;
+	}
+
+	html {
+		height: 100%; width: 100%;
+		font-size: 10px;
+	}
+
+	body {
+		-webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
+		-webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
+		-webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
+		font-family: @uiFamily;
+		font-size:10px;
+		height:100%; width:100%;
+		margin:0px; padding:0px;
+		text-transform:uppercase;
+		color: @mainColor;
+	}
+
+	app {
+		display: block;
+		position: fixed;
+		top: 0px; left: 0px;
+		width: 100%; height: 100%;
+
+		screen {
+			margin-top: @navHeight;
+		}
+
+	}
+
+	nav {
+		display: block;
+		position: absolute;
+		width: 100%; height: @navHeight;
+		line-height: @navHeight;
+		background-color: rgba(red(@appBGsolid),green(@appBGsolid),blue(@appBGsolid),0.87);
+		border-bottom: 1px solid darken(@appBGsolid,5%);
+		font-weight: 600;
+		font-size: 1.7rem;
+	}
+
+	screen {
+		display: block;
+		width: 100%;
+		height: 100%;
+		background-color:#ffffff;
+		background-image: -webkit-radial-gradient(50% 40%, circle cover, #ffffff, @appBGsolid 100%);
+	}
+
+
+

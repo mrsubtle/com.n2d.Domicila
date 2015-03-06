@@ -6,22 +6,13 @@ module.exports = function(grunt) {
 
   grunt.initConfig({
   	pkg: grunt.file.readJSON('package.json'),
-  	concat: {
-      options: {
-        separator: ';'
-      },
-      dist: {
-        src: ['_working/www/js/**/*.js'],
-        dest: '_working/www/js/compiled.js'
-      }
-    },
     uglify: {
       options: {
         banner: '/*! <%= pkg.name %> <%= grunt.template.today("dd-mm-yyyy") %> */\n'
       },
       dist: {
         files: {
-          '_build/www/js/core.min.js': ['<%= concat.dist.dest %>']
+          '_build/www/js/core.min.js': ['_working/www/js/core.js']
         }
       }
     },
@@ -56,6 +47,8 @@ module.exports = function(grunt) {
     			{ expand: true, cwd: '_working/www/', src: ['*.html'], dest: '_build/www/'},
     			//copy images
     			{ expand: true, cwd: '_working/www/img/', src: ['**'], dest: '_build/www/img/'},
+    			//copy js/lib
+    			{ expand: true, cwd: '_working/www/js/lib/', src: ['**'], dest: '_build/www/js/lib/'},
     			//copy fonts
     			{ expand: true, cwd: '_working/www/fonts/', src: ['**'], dest: '_build/www/fonts/'}
     		]
@@ -73,7 +66,7 @@ module.exports = function(grunt) {
     watch: {
       styles: {
         files: ['_working/www/css/**/*.less', '_working/www/**/*.css', '_working/www/**/*.js', '_working/www/**/*.html'], // which files to watch
-        tasks: ['less','copy','concat','uglify'],
+        tasks: ['less','uglify','copy'],
         options: {
           nospawn: true
         }
@@ -91,5 +84,6 @@ module.exports = function(grunt) {
 
   //grunt.registerTask('test', ['jshint']);
 
-  grunt.registerTask('default', ['concat', 'uglify', 'copy', 'less', 'web_server', 'watch']);
+  grunt.registerTask('default', ['uglify', 'copy', 'less', 'watch']);
+  grunt.registerTask('server', ['web_server']);
 };
