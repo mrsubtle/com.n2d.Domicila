@@ -7,12 +7,22 @@ var strings = {
 };
 
 var meta = {
+	keys : {
+		google : {
+			ios : "AIzaSyCNLRT_u09YBOx-SL76CAZny2Z3xtOQn64",
+			web : "AIzaSyAYfY4a-BeFVOLsgW2EudijdAV9GCmAXx4",
+			android : "",
+			current : ""
+		}
+	},
 	geo : {
 		updated: _.now(),
 		longitude : -97.1459262,
-		latitude : 49.8928523
+		latitude : 49.8928523,
+		city : ''
 	},
-	locations : [
+	locations : [],
+	oldLocations : [
 		{
 			a : "324 St. Johns Avenue",
 			lon : -97.1316184,
@@ -38,7 +48,8 @@ var meta = {
 			lon : -97.2116321,
 			lat : 49.9362962
 		}
-	]
+	],
+	lastLocationSearch : {}
 };
 
 var touch = {
@@ -69,6 +80,10 @@ var app = {
 		console.log('App init');
 		//Parse INIT
 		Parse.initialize("OfIvWaRe1ZvcA0x5BTK1hwPq9hEOB9Ksfi64kysX", "NWMRCKtj5OFisw0X3GJk3zZFT6k2CRkMtMkh3uZD");
+		
+		//set Google API Key
+		meta.keys.google.current = meta.keys.google.web;
+
 		//bind events necessary on mobile
 		app.bindEvents();
 		views.initialize();
@@ -80,6 +95,9 @@ var app = {
 	},
 	onDeviceReady: function() {
 		console.log('Device is ready');
+		if (device.platform.toLowerCase() == "ios"){
+			meta.keys.google.current = meta.keys.google.ios;
+		}
 	},
 	getLocation: function(useHTML5geoBoolean){
 		if (useHTML5geoBoolean) {
@@ -179,7 +197,7 @@ var views = {
 							},3000);
 						}
 					});
-					
+					$('input, select, textarea, button').blur();
 					e.preventDefault();
 				});
 			},
@@ -248,6 +266,7 @@ var views = {
 							},3000);
 						}
 					});
+					$('input, select, textarea, button').blur();
 					e.preventDefault();
 				});
 			},
@@ -316,17 +335,110 @@ var views = {
 				$.when( views.modals.addLocation.remE() ).done( views.modals.addLocation.addE() );
 			},
 			show : function(){
+				var Location = Parse.Object.extend("Locations");
+				meta.tempLocation = new Location();
+				views.modals.addLocation.getLocations();
 				$('screen').not('.hidden').addClass('fadeAway');
 				$('modal#addLocation').removeClass('viewportBottom');
+				$('modal#addLocation tabgroup#'+$('modal#addLocation tab.active').attr('for') ).removeClass('hidden');
 			},
 			hide : function(){
 				$('modal#addLocation').addClass('viewportBottom');
 				$('screen').not('.hidden').removeClass('fadeAway');
+				setTimeout(function(){
+					$('modal#addLocation content tabgroup').addClass('hidden');
+				},1000);
 			},
-			setData : function(){},
+			getLocations : function(){
+				var data = {};
+				if (meta.locations.length == 0) {
+					utility.reverseGeoCode(meta.geo.latitude,meta.geo.longitude,function(){
+						if (meta.lastLocationSearch.results) {
+							$('modal#addLocation results').html('');
+							//get current area data
+							if (meta.lastLocationSearch.results.length > 0){
+								//populate list
+								$.each(meta.lastLocationSearch.results,function(i,v){
+									v.sequence = i;
+									var t = _.template( $("#tpl_modal-addLocation_data-item").html() );
+									$('modal#addLocation results').append( t(v) );
+									views.modals.addLocation.remListE();
+									views.modals.addLocation.addListE();
+								});
+							}
+						} else {
+							console.log("Could not get nearby addresses")
+						}
+					});
+				}
+			},
+			loadDataIntoForm : function(dO){
+				//DEBUG
+				//console.log(dataObject);
+				var address = "";
+				var name = $('modal#addLocation #txt_name').val();
+				// clear the form
+				$('modal#addLocation #frm_details')[0].reset();
+				$('modal#addLocation #txt_name').val(name);
+				$('modal#addLocation #txt_lat').val(dO.geometry.location.lat);
+				$('modal#addLocation #txt_lng').val(dO.geometry.location.lng);
+				$.each(dO.address_components, function(i,v){
+					$.each(v.types,function(j,w){
+						if(w == "locality"){
+							$('modal#addLocation #txt_city').val(dO.address_components[i].short_name);
+						}
+						if( w == "street_number"){
+							address = dO.address_components[i].short_name;
+						}
+						if( w == "route"){
+							address += " " + dO.address_components[i].short_name;
+							$('modal#addLocation #txt_address1').val(address);
+						}
+						if( w == "administrative_area_level_1"){
+							$('modal#addLocation #txt_region').val(dO.address_components[i].short_name);
+						}
+						if( w == "country"){
+							$('modal#addLocation #txt_country').val(dO.address_components[i].short_name);
+						}
+						if( w == "postal_code" || w == "zip_code" ){
+							$('modal#addLocation #txt_code').val(dO.address_components[i].short_name);
+						}
+					});
+				});
+			},
+			setData : function(){
+				meta.tempLocation.set('createdBy', Parse.User.current() );
+				meta.tempLocation.set('Name', name);
+				var geo = new Parse.GeoPoint({
+					latitude: parseFloat($('modal#addLocation #txt_lat').val()),
+					longitude: parseFloat($('modal#addLocation #txt_lng').val())
+				});
+				meta.tempLocation.set('Geo', geo);
+				meta.tempLocation.set('City', $('modal#addLocation #txt_city').val() );
+				meta.tempLocation.set('Address1', $('modal#addLocation #txt_address1').val() );
+				meta.tempLocation.set('Region', $('modal#addLocation #txt_region').val() );
+				meta.tempLocation.set('Country', $('modal#addLocation #txt_country').val() );
+				meta.tempLocation.set('Code', $('modal#addLocation #txt_code').val() );
+				meta.tempLocation.save({
+					success: function(d){
+						console.log(d);
+					},
+					error: function(d,e){
+						console.log(e);
+					}
+				});
+				meta.tempLocation = null;
+				$('modal#addLocation #frm_details')[0].reset();
+				$('input, select, textarea, button').blur();
+				$('modal#addLocation results').html('');
+				views.modals.addLocation.hide();
+			},
 			remE : function(){
 				$('modal#addLocation #btn_cancel').hammer().off('tap');
 				$('modal#addLocation #btn_save').hammer().off('tap');
+				$('modal#addLocation tabs tab').hammer().off('tap');
+				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').off('blur');
+				$('modal#addLocation form#frm_details').off('submit');
 			},
 			addE : function(){
 				$('modal#addLocation #btn_cancel').hammer().on('tap', function(){
@@ -334,6 +446,41 @@ var views = {
 				});
 				$('modal#addLocation #btn_save').hammer().on('tap', function(){
 					$.when( views.modals.addLocation.setData() ).done( views.modals.addLocation.hide() );
+				});
+				$('modal#addLocation tabs tab').hammer().on('tap', function(){
+					$('modal#addLocation tabs tab').removeClass('active');
+					$(this).addClass('active');
+					$('modal#addLocation tabgroup').addClass('hidden');
+					$('modal#addLocation tabgroup#'+$('modal#addLocation tab.active').attr('for') ).removeClass('hidden');
+				});
+				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').on('blur', function(e){
+					var string = $('modal#addLocation #txt_address1').val() + ',' + $('modal#addLocation #txt_city').val();
+					var loc = utility.geolocate(string);
+					//DEBUG
+					console.log(string);
+					console.log(loc);
+					//$('input, select, textarea, button').blur();
+				});
+				$('modal#addLocation form#frm_details').on('submit', function(e){
+					var string = $('modal#addLocation #txt_address1').val() + ',' + $('modal#addLocation #txt_city').val();
+					var loc = utility.geolocate(string);
+					//DEBUG
+					console.log(string);
+					console.log(loc);
+					$('input, select, textarea, button').blur();
+					e.preventDefault();
+				});
+			},
+			remListE : function(){
+				$('modal#addLocation form results item').hammer().off('tap');
+			},
+			addListE : function(){
+				$('modal#addLocation form results item').hammer().on('tap',function(){
+					$('modal#addLocation form results item').removeClass('selected');
+					$(this).addClass('selected');
+					var i = parseInt($(this).data('id'));
+					console.log(i);
+					views.modals.addLocation.loadDataIntoForm( meta.lastLocationSearch.results[i] );
 				});
 			}
 		}
@@ -421,15 +568,30 @@ var utility = {
 	},
 	geolocate : function(addressString){
 		var loc = {};
-		$.getJSON('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURI(addressString)+'&key=AIzaSyAYfY4a-BeFVOLsgW2EudijdAV9GCmAXx4')
+		$.getJSON('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURI(addressString)+'&key='+meta.keys.google.current)
 		.done(function(data){
 			meta.tempGeolocate = data;
 			loc = data.results[0].geometry.location;
+			meta.locations = data.results;
 			return loc;
 		})
 		.fail(function(jqXHR,textStatus,error){
 			console.error(error);
 		});
+	},
+	reverseGeoCode : function(lat, lng, callback){
+		var uri = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+','+lng+'&key='+meta.keys.google.current;
+		
+		$.getJSON(uri)
+		.done(function(data){
+			console.log('Got address(es)');
+			meta.lastLocationSearch = data;
+			//console.log(data);
+		})
+		.fail(function(jqXHR,textStatus,error){
+			console.error(error);
+		})
+		.always(callback);
 	}
 };
 

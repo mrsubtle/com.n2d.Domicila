@@ -51,14 +51,40 @@
 		<modal id="addLocation" class="viewportBottom">
 			<top>
 				<i id="btn_cancel" class="item touchable">
-					<i class="icon-cancel"></i>
+					<img src="img/btn-modal-cancel.svg">
 				</i>
 				<i id="btn_save" class="item touchable">
-					<i class="icon-ok"></i>
+					<img src="img/btn-modal-save.svg">
 				</i>
 			</top>
-			<content>
-				test
+			<content class="inputForm">
+				<tabs>
+					<tab class="active" for="details">Details</tab>
+					<tab for="images">Images</tab>
+				</tabs>
+				<tabgroup id="details" class="hidden">
+					<form id="frm_details">
+						<fieldset>
+							<input id="txt_name" type="text" placeholder="Dream home" autocorrect="on" autocapitalize="sentence">
+						</fieldset>
+						<fieldset>
+							<input id="txt_address1" type="text" placeholder="1234 Some Way" autocorrect="off" autocapitalize="sentence">
+							<input id="txt_city" type="text" placeholder="Heresville" autocorrect="on" autocapitalize="sentence">
+							<input id="txt_lat" type="hidden">
+							<input id="txt_lng" type="hidden">
+							<input id="txt_country" type="hidden">
+							<input id="txt_region" type="hidden">
+							<input id="txt_code" type="hidden">
+						</fieldset>
+						<fieldset>
+							<header>Near you</header>
+							<results></results>
+						</fieldset>
+					</form>
+				</tabgroup>
+				<tabgroup id="images" class="hidden">
+					image list here
+				</tabgroup>
 			</content>
 		</modal>
 		<screen id="login" class="hidden">
@@ -67,7 +93,7 @@
 					<img src="img/nav-logo.svg" id="brand">
 					<form id="frm_login">
 						<fieldset>
-							<input id="txt_user" type="text" placeholder="username">
+							<input id="txt_user" type="text" placeholder="username" autocorrect="off" autocapitalize="none">
 							<input id="txt_pass" type="password" placeholder="password">
 							<button id="btn_login" class="primary touchable" type="submit">LOGIN</button>
 						</fieldset>
@@ -90,8 +116,8 @@
 						<fieldset>
 							<input id="txt_fName" type="text" placeholder="First name (for greetings)">
 							<br>
-							<input id="txt_uName" type="text" placeholder="User.name.00">
-							<input id="txt_email" type="text" placeholder="you@server.net">
+							<input id="txt_uName" type="text" placeholder="User.name.00" autocorrect="off" autocapitalize="none">
+							<input id="txt_email" type="text" placeholder="you@server.net" autocorrect="off" autocapitalize="none">
 							<br>
 							<input id="txt_pass1" type="password" placeholder="password">
 							<input id="txt_pass2" type="password" placeholder="confirm">
@@ -113,7 +139,7 @@
 						<img src="img/nav-menu.svg">
 					</i>
 				</left>
-				<title>Locations</title>
+				<title>All Locations</title>
 				<right>
 					<i id="btn_refreshDistance" class="touchable">
 						<img src="img/nav-refresh.svg">
@@ -132,18 +158,24 @@
 
 	<script id="tpl_card" type="text/template">
 		<card>
-			<directions data-lon="<%= lon %>" data-lat="<%= lat %>">
+			<directions data-lon="<%= geometry.location.lon %>" data-lat="<%= geometry.location.lon %>">
 				<i class="touchable">
 					<img src="img/btn-directions.svg">
 				</i>
 			</directions>
 			<label>
-				<address><%= a %></address>
+				<address><%= formatted_address %></address>
 				<distance><%= d %>&nbsp;km, about <%= t %> minute<% if(t == 1){print('')}else{print('s')} %></distance>
 			</label>
 		</card>
 	</script>
+	<script id="tpl_modal-addLocation_data-item" type="text/template">
+		<item data-id="<%= sequence %>" data-lat="<%= geometry.location.lat %>" data-lon="<%= geometry.location.lng %>">
+			<%= formatted_address %>
+		</item>
+	</script>
 
+	<script src="cordova.js"></script>
 	<script src="js/lib/underscore-min.js"></script>
 	<script src="js/lib/backbone-min.js"></script>
 	<script src="js/lib/jquery-2.1.1.min.js"></script>

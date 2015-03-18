@@ -371,7 +371,7 @@
 		display: inline-block;
 		position: fixed;
 		top: 0px; left: 0px;
-		width: 80%; height: 100%;
+		width: 90%; height: 100%;
 		max-width: 350px;
 		margin: 0; padding: 2rem;
 		background: -webkit-linear-gradient(left, #262626 0, rgba(38,38,38,0.8) 47%, rgba(38,38,38,0) 100%);
@@ -424,6 +424,44 @@
 			letter-spacing: 0.1em;
 			display: inline-block;
 			padding-right: 1em;
+		}
+	}
+
+	tabs {
+		width: 100%;
+		height: @touchBase;
+		//flexbox definition
+		display: -webkit-flex;
+		-webkit-box-direction: normal;
+		-webkit-box-orient: horizontal;
+		-webkit-flex-direction: row;
+		-webkit-flex-wrap: nowrap;
+		-webkit-box-pack: start;
+		-webkit-justify-content: space-around;
+		-webkit-align-content: stretch;
+		-webkit-box-align: start;
+		-webkit-align-items: center;
+		border-bottom: 0.1em solid @tint;
+		tab {
+			display: block;
+			-webkit-box-ordinal-group: 1;
+			-webkit-order: 0;
+			-webkit-align-self: auto;
+			-webkit-flex: 1 0 auto;
+			height: @touchBase;
+			line-height: @touchBase;
+			text-align: center;
+			border-bottom: 0.2em solid rgba(0,0,0,0);
+			font-size: 1.5rem;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			font-weight: 400;
+			.animate300();
+		}
+		tab.active {
+			border-bottom: 0.2em solid @tint;
+			font-weight: 500;
+			color: @tint;
 		}
 	}
 
@@ -605,4 +643,69 @@
 		}
 	}
 
+// MODAL-SPECIFIC
+
+	modal#addLocation {
+		content {
+			margin: 0; padding: 0;
+
+		}
+		form {
+			padding: 0; margin: 0;
+			//background-color: modalBG;
+			fieldset {
+				margin: 2.1rem auto;
+				background-color: @appBGsolid;
+				header {
+					text-transform: uppercase;
+					font-size: 1.5rem;
+					padding: 1.5rem;
+				}
+				results {
+					display: inline-block;
+					position: relative;
+					width: 100%;
+					item {
+						display: block;
+						background-color: #fff;
+						font-weight: 500;
+						font-size: 1.7rem;
+						padding: 0 1.5rem;
+						padding-right: @touchBase;
+						margin-bottom: 0.1rem;
+						position: relative;
+						line-height: @touchBase;
+						height: @touchBase;
+						width: 100%;
+						overflow: hidden;
+						color: lighten(@mainColor,37%);
+					}
+					item::last-child {
+						margin: 0;
+					}
+					item::after {
+						display: inline-block;
+						position: absolute;
+						top: 0; right: 0;
+						width: @touchBase; height: @touchBase;
+						line-height: @touchBase;
+						text-align: center;
+						content: "\e82a";
+						font-family: @iconFamily;
+						color: lighten(@tint,37%);
+					}
+					item.selected {
+						color: @mainColor;
+					}
+					item.selected::after {
+						content: "\e82b";
+						color: @tint;
+					}
+				}
+			}
+		}
+		#txt_name {
+			font-weight: 700;
+		}
+	}
 
