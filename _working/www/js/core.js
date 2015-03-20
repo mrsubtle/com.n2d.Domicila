@@ -133,10 +133,10 @@ var views = {
 	initialize: function(screen) {
 		console.log('View inits');
 		menu.initialize();
+		// check if there is an active session
 		if ( Parse.User.current() ) {
-			// init all the in-app screens
-			views.modals.addLocation.initialize();
-
+			// init all the in-app views
+			//views.modals.addLocation.initialize();
 			// show the default view
 			views.screens.list.initialize();
 		} else {
@@ -284,30 +284,68 @@ var views = {
 				$.when( views.screens.list.getData() ).done( views.screens.list.render() );
 			},
 			getData : function(){
-				_.each(meta.locations, function(e,i,l){
+				var userLocation = Parse.User.current().get('location');
+				var geoQ = new Parse.Query(Parse.Object.extend('Locations'));
+				geoQ.near('Geo', userLocation);
+				geoQ.find({
+					success : function(data){
+						//DEBUG
+						//console.log(data);
+						meta.locations = Parse.Collection.extend({
+							model : data
+						});
+					},
+					error : function(data,error){
+						console.log('Error querying location')
+						console.log(error)
+					}
+				});
+				/*_.each(meta.locations, function(e,i,l){
 					meta.locations[i].d = utility.getDist(e.lon,e.lat);
 					meta.locations[i].t = utility.getTimeToDist(e.d);
 				});
-				meta.locations = _.sortBy(meta.locations, function(e){ return e.d });
+				meta.locations = _.sortBy(meta.locations, function(e){ return e.d });*/
 			},
 			render : function(){
 				$('app screen').addClass('hidden');
+				//reset the list content
+				$('screen#list content').html( '' );
 				$.when( views.screens.list.remE() ).done( function(){
-					views.screens.list.addE();
-					$('screen#list').removeClass('hidden');
-					//reset the list content
-					$('screen#list content').html( '' );
-					var t = _.template( $('#tpl_card').html() );
-					//populate the list
-					for (var i = meta.locations.length - 1; i >= 0; i--) {
-						$('screen#list content').prepend( t(meta.locations[i]) );
-					};
+					meta.locations = Parse.Collection.extend({
+						model: Parse.Object.extend('Locations')
+					});
+					var nearbyLocations = new meta.locations();
+					nearbyLocations.fetch({
+						success : function(data){
+							var t = _.template( $('#tpl_card').html() );
+							_.each(data.models, function(e,i,l){
+								// e = individual object
+								// i = array index ##
+								// l = passed array
+								var o = {}
+								o.geo = e.get('Geo');
+								o.name = e.get('Name');
+								o.address = e.get('Address1');
+								o.d = utility.getDist(o.geo.longitude, o.geo.latitude);
+								o.t = utility.getTimeToDist(o.d);
+								//populate the list
+								$('screen#list content').append( t(o) );
+							});
+							views.screens.list.addE();
+							$('screen#list').removeClass('hidden');
+						},
+						error : function(data, error){
+							console.log('Failed creating nearby collection');
+							console.log(error);
+						}
+					});
 				});
 			},
 			remE : function(){
 				$('screen#list #btn_toggleMenu').hammer().off('tap');
 				$('screen#list #btn_refreshDistance').hammer().off('tap');
 				$('screen#list #btn_addLocation').hammer().off('tap');
+				return true
 			},
 			addE : function(){
 				$('screen#list #btn_toggleMenu').hammer().on('tap',function(){
@@ -319,8 +357,9 @@ var views = {
 					$(this).toggleClass('infiniteSpin');
 				});
 				$('screen#list #btn_addLocation').hammer().on('tap',function(){
-					views.modals.addLocation.show();
+					$.when( views.modals.addLocation.initialize() ).done( views.modals.addLocation.show() );
 				});
+				return true
 			}
 		},
 		detail : {
@@ -455,10 +494,12 @@ var views = {
 				});
 				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').on('blur', function(e){
 					var string = $('modal#addLocation #txt_address1').val() + ',' + $('modal#addLocation #txt_city').val();
-					var loc = utility.geolocate(string);
-					//DEBUG
-					console.log(string);
-					console.log(loc);
+					
+					$.when( utility.geolocate(string) ).done(function(r){
+						//DEBUG
+						console.log(string);
+						console.log(r);
+					});
 					//$('input, select, textarea, button').blur();
 				});
 				$('modal#addLocation form#frm_details').on('submit', function(e){
