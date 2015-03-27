@@ -9,17 +9,12 @@ var strings = {
 var meta = {
 	keys : {
 		google : {
-			ios : "AIzaSyCNLRT_u09YBOx-SL76CAZny2Z3xtOQn64",
+			//ios : "AIzaSyCNLRT_u09YBOx-SL76CAZny2Z3xtOQn64",
+			ios : "AIzaSyAYfY4a-BeFVOLsgW2EudijdAV9GCmAXx4",
 			web : "AIzaSyAYfY4a-BeFVOLsgW2EudijdAV9GCmAXx4",
-			android : "",
+			android : "AIzaSyAYfY4a-BeFVOLsgW2EudijdAV9GCmAXx4",
 			current : ""
 		}
-	},
-	geo : {
-		updated: _.now(),
-		longitude : -97.1459262,
-		latitude : 49.8928523,
-		city : ''
 	},
 	locations : [],
 	oldLocations : [
@@ -54,24 +49,29 @@ var meta = {
 
 var touch = {
 	addE: function(){
-		$('.touchable').on('mousedown touchstart',function(){
-			$('.touched').removeClass('touched');
-			$(this).addClass('touched');
-		});
-		$('.touchable').on('mouseup touchend touchcancel',function(){
-			$('.touched').removeClass('touched');
+		return $.Deferred(function(f){
+			$('.touchable').on('mousedown touchstart',function(){
+				$('.touched').removeClass('touched');
+				$(this).addClass('touched');
+			});
+			$('.touchable').on('mouseup touchend touchcancel',function(){
+				$('.touched').removeClass('touched');
+			});
+			f.resolve();
 		});
 	},
 	remE: function(){
-		$('.touchable').off('mousedown touchstart');
-		$('.touchable').off('mouseup touchend touchcancel');
+		return $.Deferred(function(f){
+			$('.touchable').off('mousedown touchstart');
+			$('.touchable').off('mouseup touchend touchcancel');
+			f.resolve();
+		});
 	},
 	initialize: function(){
-		touch.addE();
+		touch.remE().done( touch.addE );
 	},
 	reset: function(){
-		touch.remE();
-		touch.initialize();
+		touch.remE().done( touch.addE );
 	}
 };
 
@@ -278,88 +278,111 @@ var views = {
 		},
 		list : {
 			initialize : function(){
-				console.log("Determining user's location...");
-				app.getLocation( true );
-				console.log('Loading list of locations...');
-				$.when( views.screens.list.getData() ).done( views.screens.list.render() );
+				views.screens.list.render();
+				views.screens.list.getData();
 			},
-			getData : function(){
-				var userLocation = Parse.User.current().get('location');
-				var geoQ = new Parse.Query(Parse.Object.extend('Locations'));
-				geoQ.near('Geo', userLocation);
-				geoQ.find({
-					success : function(data){
-						//DEBUG
-						//console.log(data);
-						meta.locations = Parse.Collection.extend({
-							model : data
-						});
-					},
-					error : function(data,error){
-						console.log('Error querying location')
-						console.log(error)
-					}
+			getData : function(forceDataUpdate){
+				$('screen#list #btn_refreshDistance').addClass('disabled');
+				$('screen#list #btn_refreshDistance').addClass('infiniteSpin');
+				if (forceDataUpdate) { $('screen#list content').html( 'Loading...' ); }
+				$.when( utility.deferredGetLocation(true,forceDataUpdate) ).then(function(gp){
+					var geoQ = new Parse.Query(Parse.Object.extend('Locations'));
+					geoQ.near('Geo', gp);
+					geoQ.find({
+						success : function(data){
+							//DEBUG
+							//console.log(data);
+							meta.locations = Parse.Collection.extend({
+								model: Parse.Object.extend('Locations')
+							});
+							var nearbyLocations = new meta.locations();
+							nearbyLocations.fetch({
+								success : function(data){
+									//reset the list content
+									$('screen#list content').html( '' );
+									var t = _.template( $('#tpl_card').html() );
+									var a = [];
+									_.each(data.models, function(e,i,l){
+										// e = individual object
+										// i = array index ##
+										// l = passed array
+										var o = {};
+										o.geo = e.get('Geo');
+										o.name = e.get('Name');
+										o.address = e.get('Address1');
+										o.d = utility.getDist(o.geo.longitude, o.geo.latitude);
+										o.t = utility.getTimeToDist(o.d);
+										a.push(o);
+										//populate the list
+										//$('screen#list content').append( t(o) );
+									});
+									a = _.sortBy(a, function(e){ return e.d });
+									_.each(a, function(e,i,l){
+										//populate the list
+										$('screen#list content').append( t(e) );
+										setTimeout(function(){
+											$('screen#list content card').addClass('visible');
+										},1750);
+									});
+									touch.reset();
+									views.screens.list.remE().done(views.screens.list.addE);
+								},
+								error : function(data, error){
+									//reset the list content
+									$('screen#list content').html( 'Could not load your Locations' );
+									console.log('Failed creating nearby collection');
+									console.log(error);
+								}
+							});
+						},
+						error : function(data,error){
+							$('screen#list content').html( 'Could not load your Locations' );
+							console.log('Error querying Locations')
+							console.log(error)
+						}
+					});
+				}).fail(function(error){
+					$('screen#list content').html( 'Could not load your current location.' );
+					console.error(error);
+				}).always(function(){
+					$('screen#list #btn_refreshDistance').removeClass('disabled');
+					$('screen#list #btn_refreshDistance').removeClass('infiniteSpin');
 				});
-				/*_.each(meta.locations, function(e,i,l){
-					meta.locations[i].d = utility.getDist(e.lon,e.lat);
-					meta.locations[i].t = utility.getTimeToDist(e.d);
-				});
-				meta.locations = _.sortBy(meta.locations, function(e){ return e.d });*/
 			},
 			render : function(){
 				$('app screen').addClass('hidden');
-				//reset the list content
-				$('screen#list content').html( '' );
-				$.when( views.screens.list.remE() ).done( function(){
-					meta.locations = Parse.Collection.extend({
-						model: Parse.Object.extend('Locations')
-					});
-					var nearbyLocations = new meta.locations();
-					nearbyLocations.fetch({
-						success : function(data){
-							var t = _.template( $('#tpl_card').html() );
-							_.each(data.models, function(e,i,l){
-								// e = individual object
-								// i = array index ##
-								// l = passed array
-								var o = {}
-								o.geo = e.get('Geo');
-								o.name = e.get('Name');
-								o.address = e.get('Address1');
-								o.d = utility.getDist(o.geo.longitude, o.geo.latitude);
-								o.t = utility.getTimeToDist(o.d);
-								//populate the list
-								$('screen#list content').append( t(o) );
-							});
-							views.screens.list.addE();
-							$('screen#list').removeClass('hidden');
-						},
-						error : function(data, error){
-							console.log('Failed creating nearby collection');
-							console.log(error);
-						}
-					});
+				views.screens.list.remE().done( function(){
+					views.screens.list.addE();
+					$('screen#list').removeClass('hidden');
 				});
 			},
 			remE : function(){
-				$('screen#list #btn_toggleMenu').hammer().off('tap');
-				$('screen#list #btn_refreshDistance').hammer().off('tap');
-				$('screen#list #btn_addLocation').hammer().off('tap');
-				return true
+				return $.Deferred(function(f){
+					$('screen#list #btn_toggleMenu').hammer().off('tap');
+					$('screen#list #btn_refreshDistance').hammer().off('tap');
+					$('screen#list #btn_addLocation').hammer().off('tap');
+					$('screen#list content card').hammer().off('tap');
+					f.resolve();
+				});
 			},
 			addE : function(){
-				$('screen#list #btn_toggleMenu').hammer().on('tap',function(){
-					$(this).addClass('spinFaceLeft');
-					setTimeout(menu.show,300);
+				return $.Deferred(function(f){
+					$('screen#list #btn_toggleMenu').hammer().on('tap',function(){
+						$(this).addClass('spinFaceLeft');
+						setTimeout(menu.show,300);
+					});
+					$('screen#list #btn_refreshDistance').hammer().on('tap',function(){
+						views.screens.list.getData(true);
+					});
+					$('screen#list #btn_addLocation').hammer().on('tap',function(){
+						$.when( views.modals.addLocation.initialize() ).done( views.modals.addLocation.show() );
+					});
+					$('screen#list content card').hammer().on('tap',function(){
+						// do something to show the item's details
+						
+					});
+					f.resolve();
 				});
-				$('screen#list #btn_refreshDistance').hammer().on('tap',function(){
-					$(this).toggleClass('disabled');
-					$(this).toggleClass('infiniteSpin');
-				});
-				$('screen#list #btn_addLocation').hammer().on('tap',function(){
-					$.when( views.modals.addLocation.initialize() ).done( views.modals.addLocation.show() );
-				});
-				return true
 			}
 		},
 		detail : {
@@ -376,8 +399,9 @@ var views = {
 			show : function(){
 				var Location = Parse.Object.extend("Locations");
 				meta.tempLocation = new Location();
-				views.modals.addLocation.getLocations();
+				views.modals.addLocation.getNearbyLocations();
 				$('screen').not('.hidden').addClass('fadeAway');
+				//$('modal#addLocation top #btn_save').addClass('disabled');
 				$('modal#addLocation').removeClass('viewportBottom');
 				$('modal#addLocation tabgroup#'+$('modal#addLocation tab.active').attr('for') ).removeClass('hidden');
 			},
@@ -388,28 +412,25 @@ var views = {
 					$('modal#addLocation content tabgroup').addClass('hidden');
 				},1000);
 			},
-			getLocations : function(){
-				var data = {};
-				if (meta.locations.length == 0) {
-					utility.reverseGeoCode(meta.geo.latitude,meta.geo.longitude,function(){
-						if (meta.lastLocationSearch.results) {
-							$('modal#addLocation results').html('');
-							//get current area data
-							if (meta.lastLocationSearch.results.length > 0){
-								//populate list
-								$.each(meta.lastLocationSearch.results,function(i,v){
-									v.sequence = i;
-									var t = _.template( $("#tpl_modal-addLocation_data-item").html() );
-									$('modal#addLocation results').append( t(v) );
-									views.modals.addLocation.remListE();
-									views.modals.addLocation.addListE();
-								});
-							}
-						} else {
-							console.log("Could not get nearby addresses")
-						}
+			getNearbyLocations : function(){
+				console.log('getNearbyLocations');
+				utility.deferredGetLocation(true).then(function(geoPoint){
+					utility.deferredGetAddress(geoPoint).then(function(r){
+						//DEBUG
+						//console.log('Addresses...');
+						//console.log(r);
+						// add results to the UI
+						_.each(r.results, function(e,i,l){
+							// e = individual object
+							// i = array index ##
+							// l = passed array
+							e.sequence = i;
+							var t = _.template( $('#tpl_modal-addLocation_data-item').html() );
+							$('modal#addLocation results').append( t(e) );
+							views.modals.addLocation.remListE().done(views.modals.addLocation.addListE);
+						});
 					});
-				}
+				});
 			},
 			loadDataIntoForm : function(dO){
 				//DEBUG
@@ -424,17 +445,17 @@ var views = {
 				$.each(dO.address_components, function(i,v){
 					$.each(v.types,function(j,w){
 						if(w == "locality"){
-							$('modal#addLocation #txt_city').val(dO.address_components[i].short_name);
+							$('modal#addLocation #txt_city').val(dO.address_components[i].long_name);
 						}
 						if( w == "street_number"){
-							address = dO.address_components[i].short_name;
+							address = dO.address_components[i].long_name;
 						}
 						if( w == "route"){
-							address += " " + dO.address_components[i].short_name;
+							address += " " + dO.address_components[i].long_name;
 							$('modal#addLocation #txt_address1').val(address);
 						}
 						if( w == "administrative_area_level_1"){
-							$('modal#addLocation #txt_region').val(dO.address_components[i].short_name);
+							$('modal#addLocation #txt_region').val(dO.address_components[i].long_name);
 						}
 						if( w == "country"){
 							$('modal#addLocation #txt_country').val(dO.address_components[i].short_name);
@@ -463,7 +484,8 @@ var views = {
 						console.log(d);
 					},
 					error: function(d,e){
-						console.log(e);
+						console.error(e);
+						alert(e.message);
 					}
 				});
 				meta.tempLocation = null;
@@ -484,7 +506,10 @@ var views = {
 					views.modals.addLocation.hide();
 				});
 				$('modal#addLocation #btn_save').hammer().on('tap', function(){
-					$.when( views.modals.addLocation.setData() ).done( views.modals.addLocation.hide() );
+					$.when( views.modals.addLocation.setData() ).done( function(){
+						views.screens.list.getData(true);
+						views.modals.addLocation.hide();
+					} );
 				});
 				$('modal#addLocation tabs tab').hammer().on('tap', function(){
 					$('modal#addLocation tabs tab').removeClass('active');
@@ -513,15 +538,21 @@ var views = {
 				});
 			},
 			remListE : function(){
-				$('modal#addLocation form results item').hammer().off('tap');
+				return $.Deferred(function(f){
+					$('modal#addLocation form results item').hammer().off('tap');
+					f.resolve();
+				});
 			},
 			addListE : function(){
-				$('modal#addLocation form results item').hammer().on('tap',function(){
-					$('modal#addLocation form results item').removeClass('selected');
-					$(this).addClass('selected');
-					var i = parseInt($(this).data('id'));
-					console.log(i);
-					views.modals.addLocation.loadDataIntoForm( meta.lastLocationSearch.results[i] );
+				return $.Deferred(function(f){
+					$('modal#addLocation form results item').hammer().on('tap',function(){
+						$('modal#addLocation form results item').removeClass('selected');
+						$(this).addClass('selected');
+						var i = parseInt($(this).data('id'));
+						console.log(i);
+						views.modals.addLocation.loadDataIntoForm( meta.lastLocationSearch.results[i] );
+					});
+					f.resolve();
 				});
 			}
 		}
@@ -576,6 +607,13 @@ var menu = {
 };
 
 var utility = {
+	dateDiff : function(date1, date2){
+		if (!date2) {
+			// if no date2, assume to check difference to now
+			date2 = new Date();
+		}
+		return (date1 - date2)
+	},
 	deg2rad : function(deg){
 		return deg * (Math.PI/180)
 	},
@@ -587,9 +625,9 @@ var utility = {
 		};
 
 		var R = 6371; // Radius of the earth in km
-		var dLat = utility.deg2rad( parseFloat(meta.geo.latitude) - parseFloat(target.lat) );
-		var dLon = utility.deg2rad( parseFloat(meta.geo.longitude) - parseFloat(target.lon) ); 
-		var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(utility.deg2rad( parseFloat(target.lat) )) * Math.cos(utility.deg2rad( parseFloat(meta.geo.latitude) )) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+		var dLat = utility.deg2rad( parseFloat(Parse.User.current().get('Geo').latitude) - parseFloat(target.lat) );
+		var dLon = utility.deg2rad( parseFloat(Parse.User.current().get('Geo').longitude) - parseFloat(target.lon) ); 
+		var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(utility.deg2rad( parseFloat(target.lat) )) * Math.cos(utility.deg2rad( parseFloat(Parse.User.current().get('Geo').latitude) )) * Math.sin(dLon/2) * Math.sin(dLon/2); 
 		var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
 		var d = R * c; // Distance in km
 		var dRounded2 = +d.toFixed(2); // Round to 2 decimal
@@ -633,7 +671,66 @@ var utility = {
 			console.error(error);
 		})
 		.always(callback);
-	}
+	},
+	deferredGetLocation : function(useHTML5geoBoolean, forceDataUpdate){
+		return $.Deferred(function(data){
+			// 300000ms = 5min
+			if ( utility.dateDiff(Parse.User.current().get('GeoAt')) <= 300000 || forceDataUpdate == true ) {
+				// get a fresh location
+				if (useHTML5geoBoolean == true) {
+					if (navigator.geolocation) {
+						navigator.geolocation.getCurrentPosition(function(position){
+							var point = new Parse.GeoPoint({
+								'latitude' : position.coords.latitude,
+								'longitude' : position.coords.longitude
+							});
+							Parse.User.current().set('Geo',point);
+							Parse.User.current().set('GeoAt',new Date);
+							Parse.User.current().save(null,{
+								success : function(user){
+									console.log("Parse: Updated User's Geolocation");
+								},
+								error : function(user, error){
+									console.error("Parse: Failed to update User's Geolocation");
+									console.error(error);
+								}
+							});
+							data.resolve(point);
+						});
+					} else {
+						data.reject({
+							error : 'Browser doesn\'t support HTML5 Geolocation.'
+						});
+						console.error('Browser doesn\'t support HTML5 Geolocation.');
+					}
+				} else {
+					data.reject({
+						error : "Must use useHTML5geoBoolean"
+					});
+				}
+			} else {
+				// get the cached data
+				data.resolve( Parse.User.current().get('Geo') );
+			}
+		}).promise();
+	},
+	deferredGetAddress : function(geoPoint){
+		var uri;
+		if (!geoPoint) {
+			uri = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+Parse.User.current().get('Geo').latitude+','+Parse.User.current().get('Geo').longitude+'&key='+meta.keys.google.current;
+		} else {
+			uri = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+geoPoint.latitude+','+geoPoint.longitude+'&key='+meta.keys.google.current;
+		}
+		return $.getJSON(uri)
+			.done(function(data){
+				console.log('Got address(es)');
+				meta.lastLocationSearch = data;
+				//console.log(data);
+			})
+			.fail(function(jqXHR,textStatus,error){
+				console.error(error);
+			});
+	},
 };
 
 $(function(){
