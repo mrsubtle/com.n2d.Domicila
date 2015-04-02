@@ -89,8 +89,6 @@ var app = {
 
 		//bind events necessary on mobile
 		app.bindEvents();
-		views.initialize();
-		touch.initialize();
 	},
 	bindEvents: function() {
 		//bind device events
@@ -108,6 +106,8 @@ var app = {
 		if (device.platform.toLowerCase() == "ios"){
 			meta.keys.google.current = meta.keys.google.ios;
 		}
+		views.initialize();
+		touch.initialize();
 	},
 	getLocation: function(useHTML5geoBoolean){
 		if (useHTML5geoBoolean) {
@@ -299,6 +299,8 @@ var views = {
 				if ( meta.deviceReady ) {
 					useHTMLgeo = false;
 				}
+				//DEBUG
+				console.log('STEP');
 				utility.deferredGetLocation(useHTMLgeo,forceDataUpdate).done(function(gp){
 					var geoQ = new Parse.Query(Parse.Object.extend('Locations'));
 					geoQ.near('Geo', gp);
@@ -357,6 +359,9 @@ var views = {
 					});
 				}).fail(function(error){
 					$('screen#list content').html( 'Could not load your current location.' );
+					if(error.message){
+						$('screen#list content').append('  '+error.message);
+					}
 					console.error(error);
 				}).always(function(){
 					$('screen#list #btn_refreshDistance').removeClass('disabled');
@@ -428,11 +433,18 @@ var views = {
 			},
 			getNearbyLocations : function(){
 				console.log('getNearbyLocations');
-				utility.deferredGetLocation(true).done(function(geoPoint){
+				var useHTMLgeo = true;
+				//if (forceDataUpdate) { $('screen#list content').html( 'Loading...' ); }
+				var useHTMLgeo = true;
+				if ( meta.deviceReady ) {
+					useHTMLgeo = false;
+				}
+				utility.deferredGetLocation(useHTMLgeo).done(function(geoPoint){
 					utility.deferredGetAddress(geoPoint).done(function(r){
 						//DEBUG
 						//console.log('Addresses...');
 						//console.log(r);
+						meta.lastLocationSearch = r;
 						// add results to the UI
 						_.each(r.results, function(e,i,l){
 							// e = individual object
@@ -483,6 +495,8 @@ var views = {
 			setData : function(){
 				meta.tempLocation.set('createdBy', Parse.User.current() );
 				meta.tempLocation.set('Name', name);
+				/*if ( ($('modal#addLocation #txt_lat').val()=="") || ($('modal#addLocation #txt_lng').val()=="") ) {
+				}*/
 				var geo = new Parse.GeoPoint({
 					latitude: parseFloat($('modal#addLocation #txt_lat').val()),
 					longitude: parseFloat($('modal#addLocation #txt_lng').val())
@@ -532,23 +546,39 @@ var views = {
 					$('modal#addLocation tabgroup#'+$('modal#addLocation tab.active').attr('for') ).removeClass('hidden');
 				});
 				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').on('keyup', function(e){
-					
+					//DEBUG
+					//	console.log('KEY PRESSED!');
+
 					meta.lastKeypressAt = new Date();
 					var string = $('modal#addLocation #txt_address1').val() + ',' + $('modal#addLocation #txt_city').val();
 					
 					// immediately invoke the timer to run after 2 sec
 					setTimeout(function(){
-						if ( (meta.lastKeypressAt - new Date()) >= 2000 ) {
+						//DEBUG
+						//console.log('KEY PRESSED! Timeout Function');
+						if ( (new Date() - meta.lastKeypressAt) >= 2000 ) {
 							//DEBUG
-							console.log('Normally, I\'d be doing something here');
-							/*utility.delayGeolocate(string).done(function(r){
+							//console.log('Normally, I\'d be doing something here');
+							utility.delayGeolocate(string).done(function(r){
 								//DEBUG
 								console.log(string);
 								console.log(r);
+								meta.lastLocationSearch = r;
+								// add results to the UI
+								$('modal#addLocation results').html('');
+								_.each(r.results, function(e,i,l){
+									// e = individual object
+									// i = array index ##
+									// l = passed array
+									e.sequence = i;
+									var t = _.template( $('#tpl_modal-addLocation_data-item').html() );
+									$('modal#addLocation results').append( t(e) );
+									views.modals.addLocation.remListE().done(views.modals.addLocation.addListE);
+								});
 							}).fail(function(e){
 								//DEBUG
 								console.error(e);
-							});*/
+							});
 						}
 					},2000);
 					
@@ -751,8 +781,40 @@ var utility = {
 						console.error('Browser doesn\'t support HTML5 Geolocation.');
 					}
 				} else {
-					data.reject({
-						error : "Must use useHTML5geoBoolean"
+					console.log('Fetching position via Cordova...');
+					navigator.geolocation.getCurrentPosition(function(position){
+						// sucess
+						//DEBUG
+						console.log(position);
+						var point = new Parse.GeoPoint({
+							'latitude' : position.coords.latitude,
+							'longitude' : position.coords.longitude
+						});
+						Parse.User.current().set('Geo',point);
+						Parse.User.current().set('GeoAt',new Date);
+						Parse.User.current().save(null,{
+							success : function(user){
+								console.log("Parse: Updated User's Geolocation");
+							},
+							error : function(user, error){
+								console.error("Parse: Failed to update User's Geolocation");
+								console.error(error);
+							}
+						});
+						data.resolve(point);
+					},function(e){
+						// error
+						//DEBUG
+						console.error('Phonegap GEO FAILED');
+						console.error(e);
+						data.reject({
+							error : e.message
+						});
+					},
+					{
+						maximumAge: 3000,
+						timeout: 30000,
+						enableHighAccuracy: true
 					});
 				}
 			} else {

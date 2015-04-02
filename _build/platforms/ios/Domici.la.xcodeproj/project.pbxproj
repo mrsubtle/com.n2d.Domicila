@@ -48,12 +48,12 @@
 		7E7966E61810823500FA85AD /* icon-small.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DC1810823500FA85AD /* icon-small.png */; };
 		7E7966E71810823500FA85AD /* icon-small@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DD1810823500FA85AD /* icon-small@2x.png */; };
 		82B9FF841ACD9BD40089039B /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 82B9FF831ACD9BD40089039B /* Images.xcassets */; };
+		82B9FF961ACDA5580089039B /* CDVLocation.m in Sources */ = {isa = PBXBuildFile; fileRef = C1F82F3515BD4E1B817D82E9 /* CDVLocation.m */; };
 		AA6A4BDD0A31406AB8C78476 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F89196C4E577468EBB821650 /* SystemConfiguration.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		B48297097060455595D8C9A3 /* CDVDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 06D62356758B4A1B8000F66B /* CDVDevice.m */; };
 		BC77E726812B4C6E82D6E03C /* CDVReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EEE61B49F9C4401B99E987C /* CDVReachability.m */; };
 		CB4AC32A8EAF40F8B4C420A7 /* CDVJpegHeaderWriter.m in Sources */ = {isa = PBXBuildFile; fileRef = D7F779078B0B4074AC298988 /* CDVJpegHeaderWriter.m */; };
 		CD438944E4B540C88DAD8906 /* CDVConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = F73D4A43584745349F32BB42 /* CDVConnection.m */; };
-		D049F3954F9446558F0D33D9 /* CDVLocation.m in Sources */ = {isa = PBXBuildFile; fileRef = C1F82F3515BD4E1B817D82E9 /* CDVLocation.m */; };
 		D4A0D8761607E02300AEF8BB /* Default-568h@2x~iphone.png in Resources */ = {isa = PBXBuildFile; fileRef = D4A0D8751607E02300AEF8BB /* Default-568h@2x~iphone.png */; };
 /* End PBXBuildFile section */
 
@@ -466,10 +466,10 @@
 				CB4AC32A8EAF40F8B4C420A7 /* CDVJpegHeaderWriter.m in Sources */,
 				73C88DD106BD4E1EA53E9A9B /* CDVLogger.m in Sources */,
 				1184E2EDE85B4E7EA746DBDA /* CDVNotification.m in Sources */,
-				D049F3954F9446558F0D33D9 /* CDVLocation.m in Sources */,
 				CD438944E4B540C88DAD8906 /* CDVConnection.m in Sources */,
 				BC77E726812B4C6E82D6E03C /* CDVReachability.m in Sources */,
 				0024561E740D4EBB8A2D9AF7 /* CDVVibration.m in Sources */,
+				82B9FF961ACDA5580089039B /* CDVLocation.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
