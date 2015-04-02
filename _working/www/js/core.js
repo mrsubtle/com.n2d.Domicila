@@ -44,7 +44,10 @@ var meta = {
 			lat : 49.9362962
 		}
 	],
-	lastLocationSearch : {}
+	lastLocationSearch : {},
+	lastKeypressAt : new Date(),
+	deviceReady : false,
+	deviceOnline : false
 };
 
 var touch = {
@@ -92,9 +95,16 @@ var app = {
 	bindEvents: function() {
 		//bind device events
 		document.addEventListener('deviceready', this.onDeviceReady, false);
+		document.addEventListener('online', function(){
+			meta.deviceOnline = true;
+		}, false);
+		document.addEventListener('offline', function(){
+			meta.deviceOnline = false;
+		}, false);
 	},
 	onDeviceReady: function() {
 		console.log('Device is ready');
+		meta.deviceReady = true;
 		if (device.platform.toLowerCase() == "ios"){
 			meta.keys.google.current = meta.keys.google.ios;
 		}
@@ -285,7 +295,11 @@ var views = {
 				$('screen#list #btn_refreshDistance').addClass('disabled');
 				$('screen#list #btn_refreshDistance').addClass('infiniteSpin');
 				if (forceDataUpdate) { $('screen#list content').html( 'Loading...' ); }
-				$.when( utility.deferredGetLocation(true,forceDataUpdate) ).then(function(gp){
+				var useHTMLgeo = true;
+				if ( meta.deviceReady ) {
+					useHTMLgeo = false;
+				}
+				utility.deferredGetLocation(useHTMLgeo,forceDataUpdate).done(function(gp){
 					var geoQ = new Parse.Query(Parse.Object.extend('Locations'));
 					geoQ.near('Geo', gp);
 					geoQ.find({
@@ -414,8 +428,8 @@ var views = {
 			},
 			getNearbyLocations : function(){
 				console.log('getNearbyLocations');
-				utility.deferredGetLocation(true).then(function(geoPoint){
-					utility.deferredGetAddress(geoPoint).then(function(r){
+				utility.deferredGetLocation(true).done(function(geoPoint){
+					utility.deferredGetAddress(geoPoint).done(function(r){
 						//DEBUG
 						//console.log('Addresses...');
 						//console.log(r);
@@ -498,7 +512,7 @@ var views = {
 				$('modal#addLocation #btn_cancel').hammer().off('tap');
 				$('modal#addLocation #btn_save').hammer().off('tap');
 				$('modal#addLocation tabs tab').hammer().off('tap');
-				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').off('blur');
+				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').off('keyup');
 				$('modal#addLocation form#frm_details').off('submit');
 			},
 			addE : function(){
@@ -517,14 +531,27 @@ var views = {
 					$('modal#addLocation tabgroup').addClass('hidden');
 					$('modal#addLocation tabgroup#'+$('modal#addLocation tab.active').attr('for') ).removeClass('hidden');
 				});
-				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').on('blur', function(e){
+				$('modal#addLocation form#frm_details #txt_address1, modal#addLocation form#frm_details #txt_city').on('keyup', function(e){
+					
+					meta.lastKeypressAt = new Date();
 					var string = $('modal#addLocation #txt_address1').val() + ',' + $('modal#addLocation #txt_city').val();
 					
-					$.when( utility.geolocate(string) ).done(function(r){
-						//DEBUG
-						console.log(string);
-						console.log(r);
-					});
+					// immediately invoke the timer to run after 2 sec
+					setTimeout(function(){
+						if ( (meta.lastKeypressAt - new Date()) >= 2000 ) {
+							//DEBUG
+							console.log('Normally, I\'d be doing something here');
+							/*utility.delayGeolocate(string).done(function(r){
+								//DEBUG
+								console.log(string);
+								console.log(r);
+							}).fail(function(e){
+								//DEBUG
+								console.error(e);
+							});*/
+						}
+					},2000);
+					
 					//$('input, select, textarea, button').blur();
 				});
 				$('modal#addLocation form#frm_details').on('submit', function(e){
@@ -672,6 +699,22 @@ var utility = {
 		})
 		.always(callback);
 	},
+	delayGeolocate : function(stringtoLocate){
+		return $.Deferred(function(data){
+			if (stringtoLocate) {
+				// do the lookup
+				$.getJSON('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURI(stringtoLocate)+'&key='+meta.keys.google.current)
+				.done(function(d){
+					data.resolve(d);
+				})
+				.fail(function(jqXHR,textStatus,error){
+					data.reject(error);
+				});
+			} else {
+				data.reject('No address specified.');
+			}
+		}).promise();
+	},
 	deferredGetLocation : function(useHTML5geoBoolean, forceDataUpdate){
 		return $.Deferred(function(data){
 			// 300000ms = 5min
@@ -680,22 +723,26 @@ var utility = {
 				if (useHTML5geoBoolean == true) {
 					if (navigator.geolocation) {
 						navigator.geolocation.getCurrentPosition(function(position){
-							var point = new Parse.GeoPoint({
-								'latitude' : position.coords.latitude,
-								'longitude' : position.coords.longitude
-							});
-							Parse.User.current().set('Geo',point);
-							Parse.User.current().set('GeoAt',new Date);
-							Parse.User.current().save(null,{
-								success : function(user){
-									console.log("Parse: Updated User's Geolocation");
-								},
-								error : function(user, error){
-									console.error("Parse: Failed to update User's Geolocation");
-									console.error(error);
-								}
-							});
-							data.resolve(point);
+							if (typeof position != "undefined") {
+								var point = new Parse.GeoPoint({
+									'latitude' : position.coords.latitude,
+									'longitude' : position.coords.longitude
+								});
+								Parse.User.current().set('Geo',point);
+								Parse.User.current().set('GeoAt',new Date);
+								Parse.User.current().save(null,{
+									success : function(user){
+										console.log("Parse: Updated User's Geolocation");
+									},
+									error : function(user, error){
+										console.error("Parse: Failed to update User's Geolocation");
+										console.error(error);
+									}
+								});
+								data.resolve(point);
+							} else {
+								data.reject('Unable to retrieve position from webview.');
+							}
 						});
 					} else {
 						data.reject({

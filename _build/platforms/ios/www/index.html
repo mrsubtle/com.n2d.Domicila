@@ -158,13 +158,13 @@
 
 	<script id="tpl_card" type="text/template">
 		<card>
-			<directions data-lon="<%= lon %>" data-lat="<%= lat %>">
+			<directions data-lon="<%= geo.longitude %>" data-lat="<%= geo.latitude %>">
 				<i class="touchable">
 					<img src="img/btn-directions.svg">
 				</i>
 			</directions>
 			<label>
-				<address><%= a %></address>
+				<address><%= address %></address>
 				<distance><%= d %>&nbsp;km, about <%= t %> minute<% if(t == 1){print('')}else{print('s')} %></distance>
 			</label>
 		</card>
